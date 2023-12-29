@@ -13,18 +13,29 @@ class OrderController extends Controller
             $orders = json_decode(Storage::get(env('ORDER')), true);
             $workshops = json_decode(Storage::get(env('WORKSHOP')), true);
 
-            $result = $this->processOrders($orders, $workshops);
-            
-            return response()->json(['status' => 1, 'message' => 'Data Successfully Retrieved.', 'data' => $result]);
+            $orderDetail = $this->processOrders($orders, $workshops);
+
+            $result = [
+                "status" => 1,
+                "message" => 'Data Successfully Retrieved.',
+                "data" => $orderDetail->getData()
+            ];
+
+            return response()->json($result);
         } catch (\Exception $e) {
-            return response()->json(['status' => 0, 'message' => 'Error processing data, because: ' . $e->getMessage()]);
+            $result = [
+                'status' => 500, 
+                'message' => 'Error processing data.',
+                'problem' => $e->getMessage()
+            ];
+            return response()->json($result);
         }
     }
 
     private function processOrders($orders, $workshops) {
 
-        $result = [];
-        foreach ($orders["data"] as $order) {
+        $orderDetail = [];
+        foreach ($orders as $order) {
             $name = $order["name"];
             $email = $order["email"];
             $bookingNumber = $order["booking"]["booking_number"];
@@ -35,7 +46,7 @@ class OrderController extends Controller
             $workshopContact = "";
             $workshopDistance = 0;
 
-            foreach ($workshops["data"] as $workshop) {
+            foreach ($workshops as $workshop) {
                 if (isset($order["booking"]["workshop"]["code"]) && $order["booking"]["workshop"]["code"] === $workshop["code"]) {
                     $ahassCode = $workshop["code"];
                     $workshopName = $workshop["name"];
@@ -52,7 +63,7 @@ class OrderController extends Controller
             $motorcycleName = $order["booking"]["motorcycle"]["name"];
             $motorcycleUtCode = $order["booking"]["motorcycle"]["ut_code"];
 
-            $result[] = [
+            $orderDetail[] = [
                 "name" => $name,
                 "email" => $email,
                 "booking_number" => $bookingNumber,
@@ -67,9 +78,10 @@ class OrderController extends Controller
             ];
         }
 
-        $collection = collect($result);
-        $sortedResult = $collection->sortBy('ahass_distance')->values()->all();
+        $collection = collect($orderDetail);
+        $sortedOrderDetail = $collection->sortBy('ahass_distance')->values()->all();
 
-        return response()->json($sortedResult);
+        return response()->json($sortedOrderDetail);
     }
+
 }
